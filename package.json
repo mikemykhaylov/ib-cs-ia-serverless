@@ -1,0 +1,28 @@
+{
+  "name": "ib-comp-sci-ia-serverless",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "format": "prettier --config ./.prettierrc.yml --write \"./**/*.js\"",
+    "lint": "eslint -c ./.eslintrc.yml \"./**/*.js\""
+  },
+  "devDependencies": {
+    "eslint": "^7.17.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-config-prettier": "^7.1.0",
+    "eslint-plugin-import": "^2.22.1",
+    "prettier": "^2.2.1",
+    "serverless-api-compression": "^1.0.1",
+    "serverless-offline": "^6.8.0"
+  },
+  "dependencies": {
+    "@middy/core": "^1.5.0",
+    "@middy/http-cors": "^1.5.0",
+    "apollo-datasource": "^0.7.2",
+    "apollo-server-lambda": "^2.19.1",
+    "dotenv": "^8.2.0",
+    "graphql": "^15.4.0",
+    "mongoose": "^5.11.11"
+  }
+}

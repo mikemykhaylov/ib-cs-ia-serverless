@@ -1,0 +1,25 @@
+service: ib-cyberpunk-barbershop
+frameworkVersion: "2"
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: eu-central-1
+  apiGateway:
+    shouldStartNameWithService: true
+functions:
+  graphql:
+    handler: graphql.graphqlHandler
+    events:
+      - http:
+          path: graphql
+          method: post
+          cors: true
+      - http:
+          path: graphql
+          method: get
+          cors: true
+custom:
+  contentCompression: 1024
+plugins:
+  - serverless-offline
+  - serverless-api-compression
