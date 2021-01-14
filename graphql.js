@@ -3,7 +3,6 @@ require('dotenv').config({ path: './variables.env' });
 const { ApolloServer } = require('apollo-server-lambda');
 
 const middy = require('@middy/core');
-// const cors = require('@middy/http-cors');
 const connectToDatabase = require('./db');
 
 const typeDefs = require('./apollo/typeDefs');
@@ -25,7 +24,12 @@ const server = new ApolloServer({
     mongodbAPI: MongodbAPI,
   }),
 });
-const graphqlHandler = server.createHandler();
+const graphqlHandler = server.createHandler({
+  cors: {
+    origin: true,
+    credentials: true,
+  },
+});
 const handler = middy(graphqlHandler).use(middleware);
 
 exports.graphqlHandler = handler;
