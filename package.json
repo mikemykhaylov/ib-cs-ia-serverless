@@ -8,7 +8,7 @@
     "lint": "eslint -c ./.eslintrc.yml \"./**/*.js\""
   },
   "devDependencies": {
-    "eslint": "^7.17.0",
+    "eslint": "^7.18.0",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-config-prettier": "^7.1.0",
     "eslint-plugin-import": "^2.22.1",
@@ -17,11 +17,12 @@
     "serverless-offline": "^6.8.0"
   },
   "dependencies": {
-    "@middy/core": "^1.5.0",
-    "apollo-datasource": "^0.7.2",
-    "apollo-server-lambda": "^2.19.1",
+    "@middy/core": "^1.5.1",
+    "apollo-datasource": "^0.7.3",
+    "apollo-server-lambda": "^2.19.2",
     "dotenv": "^8.2.0",
     "graphql": "^15.4.0",
-    "mongoose": "^5.11.11"
+    "jose": "^3.5.1",
+    "mongoose": "^5.11.12"
   }
 }
