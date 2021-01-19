@@ -62,8 +62,13 @@ class MongodbAPI extends DataSource {
     return freeBarbers;
   }
 
-  static async getBarber({ barberID }) {
-    const foundBarber = await Barber.findById(barberID);
+  static async getBarber({ barberID, email }) {
+    let foundBarber;
+    if (barberID) {
+      foundBarber = await Barber.findById(barberID);
+    } else {
+      foundBarber = await Barber.findOne({ email });
+    }
     return foundBarber;
   }
 

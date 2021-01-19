@@ -22,7 +22,8 @@ module.exports = {
       return foundBarbers;
     },
     // Used for:
-    // 1) Finding a barber by ID (used in Dashboard)
+    // 1) Finding a barber by ID (dev use)
+    // 2) Finding a barber by email (used in Dashboard)
     barber: async (_, args, { dataSources }) => {
       const foundBarber = await dataSources.mongodbAPI.getBarber(args);
       return foundBarber;

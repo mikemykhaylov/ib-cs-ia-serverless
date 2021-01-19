@@ -5,7 +5,7 @@ const typeDefs = gql`
     appointments(date: String, barberID: ID): [Appointment]!
     appointment(appointmentID: ID!): Appointment!
     barbers(dateTime: String): [Barber]!
-    barber(barberID: ID!): Barber!
+    barber(barberID: ID, email: String): Barber!
   }
   type Mutation {
     createAppointment(input: CreateAppointmentInput!): Appointment!
