@@ -8,6 +8,11 @@ const BarberSchema = new mongoose.Schema({
   },
   profileImageURL: { type: String, unique: true },
   specialisation: { type: String, enum: ['BEARDS', 'HAIRCUTS'] },
+  // Determines if the barber has filled all personal details
+  // False by default, because barbers are created in Auth0 Hook
+  // which doesn't provide a way to enter more information
+  // Will be set to true when barber fills specialisation, name and profileImageURL
+  completed: { type: Boolean, default: false },
   appointmentIDS: [
     {
       type: mongoose.Schema.Types.ObjectId,

@@ -41,7 +41,7 @@ class MongodbAPI extends DataSource {
   static async getBarbers({ dateTime }) {
     //! The only time we populate an ID field
     // Other times ID is passed from prev resolver and we make a separate request
-    let barbersRequest = Barber.find({});
+    let barbersRequest = Barber.find({ completed: true });
     if (dateTime) {
       // If we recieve dateTime, it means we are looking for free barbers
       // Because of that, we populate the appointments of each...
