@@ -1,5 +1,41 @@
-/* eslint-disable arrow-body-style */
-module.exports = {
+import { IResolvers } from 'apollo-server-lambda';
+import { AppointmentDocumentObject } from '../models/Appointment';
+import { BarberDocument, BarberDocumentPopulated } from '../models/Barber';
+import MongodbAPI, {
+  CreateAppointmentInput,
+  CreateBarberInput,
+  GetAppointmentInput,
+  GetAppointmentsInput,
+  GetBarberInput,
+  GetBarbersInput,
+} from './mongodbAPI';
+
+type Resolver<Parent, Args, Result> = (
+  parent: Parent,
+  args: Args,
+  context: { dataSources: { mongodbAPI: MongodbAPI } },
+) => Promise<Result>;
+
+interface Resolvers extends IResolvers {
+  Query: {
+    appointments: Resolver<undefined, GetAppointmentsInput, AppointmentDocumentObject[]>;
+    appointment: Resolver<undefined, GetAppointmentInput, AppointmentDocumentObject | undefined>;
+    barbers: Resolver<undefined, GetBarbersInput, (BarberDocument | BarberDocumentPopulated)[]>;
+    barber: Resolver<undefined, GetBarberInput, BarberDocument | undefined>;
+  };
+  Mutation: {
+    createAppointment: Resolver<undefined, CreateAppointmentInput, AppointmentDocumentObject>;
+    createBarber: Resolver<undefined, CreateBarberInput, BarberDocument>;
+  };
+  Appointment: {
+    barber: Resolver<AppointmentDocumentObject, null, BarberDocument>;
+  };
+  Barber: {
+    appointments: Resolver<BarberDocument, { date: string }, AppointmentDocumentObject[]>;
+  };
+}
+
+const resolvers: Resolvers = {
   Query: {
     // Used for:
     // 1) Listing all appointments (all barbers, all dates) (dev use)
@@ -10,8 +46,8 @@ module.exports = {
     },
     // Used for:
     // 1) Finding an appointment by ID (dev use)
-    appointment: async (_, { appointmentID }, { dataSources }) => {
-      const foundAppointment = await dataSources.mongodbAPI.getAppointment({ appointmentID });
+    appointment: async (_, args, { dataSources }) => {
+      const foundAppointment = await dataSources.mongodbAPI.getAppointment(args);
       return foundAppointment;
     },
     // Used for:
@@ -47,18 +83,24 @@ module.exports = {
     // Used for:
     // 1) Getting a barber from appointment's barberID (dev use)
     barber: async (parent, _, { dataSources }) => {
-      const foundBarber = await dataSources.mongodbAPI.getBarber({ barberID: parent.barberID });
+      const foundBarber = (await dataSources.mongodbAPI.getBarber({
+        barberID: parent.barberID.toHexString(),
+      })) as BarberDocument;
       return foundBarber;
     },
   },
   Barber: {
     // Used for:
-    // 1) Listing all appointments of specific barber from barber's appointmentIDS (used in Dashboard)
+    // 1) Listing all appointments of specific barber for date from barber's appointmentIDS (used in Dashboard)
     appointments: async (parent, args, { dataSources }) => {
       const foundAppointmentsPromises = parent.appointmentIDS.map((appointmentID) => {
-        return dataSources.mongodbAPI.getAppointment({ appointmentID });
+        return dataSources.mongodbAPI.getAppointment({
+          appointmentID: appointmentID.toHexString(),
+        });
       });
-      const foundAppointments = await Promise.all(foundAppointmentsPromises);
+      const foundAppointments = (await Promise.all(
+        foundAppointmentsPromises,
+      )) as AppointmentDocumentObject[];
 
       // Checking if args is an empty object
       if (Object.keys(args).length === 0 && args.constructor === Object) {
@@ -71,11 +113,13 @@ module.exports = {
         const endOfRequestedDate = new Date(startOfRequestedDate.getTime());
         endOfRequestedDate.setUTCDate(startOfRequestedDate.getUTCDate() + 1);
         return (
-          appointment.time > startOfRequestedDate.getTime() &&
-          appointment.time < endOfRequestedDate.getTime()
+          new Date(appointment.time).getTime() > startOfRequestedDate.getTime() &&
+          new Date(appointment.time).getTime() < endOfRequestedDate.getTime()
         );
       });
       return foundAppointmentsForDay;
     },
   },
 };
+
+export default resolvers;

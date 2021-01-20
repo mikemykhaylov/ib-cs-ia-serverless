@@ -8,7 +8,7 @@ provider:
     shouldStartNameWithService: true
 functions:
   graphql:
-    handler: graphql.graphqlHandler
+    handler: src/handlers.graphql
     events:
       - http:
           path: graphql
@@ -20,6 +20,12 @@ functions:
           cors: true
 custom:
   contentCompression: 1024
+  webpack:
+    includeModules: true
+    forceExclude:
+      - aws-sdk
+    packager: yarn
 plugins:
+  - serverless-webpack
   - serverless-offline
   - serverless-api-compression
