@@ -1,4 +1,5 @@
-import { IResolvers } from 'apollo-server-lambda';
+import { AuthenticationError, IResolvers } from 'apollo-server-lambda';
+import { Auth0ManagementToken } from '../handlers';
 import { AppointmentDocumentObject } from '../models/Appointment';
 import { BarberDocument, BarberDocumentPopulated } from '../models/Barber';
 import MongodbAPI, {
@@ -13,7 +14,12 @@ import MongodbAPI, {
 type Resolver<Parent, Args, Result> = (
   parent: Parent,
   args: Args,
-  context: { dataSources: { mongodbAPI: MongodbAPI } },
+  context: {
+    dataSources: { mongodbAPI: MongodbAPI };
+    user?: { email: string };
+    permissions?: string[];
+    managementToken: Auth0ManagementToken;
+  },
 ) => Promise<Result>;
 
 interface Resolvers extends IResolvers {
@@ -29,11 +35,31 @@ interface Resolvers extends IResolvers {
   };
   Appointment: {
     barber: Resolver<AppointmentDocumentObject, null, BarberDocument>;
+    fullName: Resolver<AppointmentDocumentObject, null, string>;
+    email: Resolver<AppointmentDocumentObject, null, string>;
+    phoneNumber: Resolver<AppointmentDocumentObject, null, string>;
   };
   Barber: {
     appointments: Resolver<BarberDocument, { date: string }, AppointmentDocumentObject[]>;
+    email: Resolver<BarberDocument, null, string>;
   };
 }
+
+const protectedAppointmentProperty: (
+  property: 'email' | 'fullName' | 'phoneNumber',
+) => Resolver<AppointmentDocumentObject, null, string> = (property) => {
+  return async (parent, _, { dataSources, user, permissions }) => {
+    if (user && permissions) {
+      const assignedBarber = (await dataSources.mongodbAPI.getBarber({
+        email: user.email,
+      })) as BarberDocument;
+      if (user.email === assignedBarber.email && permissions.includes('read:contactInfo')) {
+        return parent[property];
+      }
+    }
+    throw new AuthenticationError('Unauthorized');
+  };
+};
 
 const resolvers: Resolvers = {
   Query: {
@@ -88,6 +114,9 @@ const resolvers: Resolvers = {
       })) as BarberDocument;
       return foundBarber;
     },
+    fullName: protectedAppointmentProperty('fullName'),
+    email: protectedAppointmentProperty('email'),
+    phoneNumber: protectedAppointmentProperty('phoneNumber'),
   },
   Barber: {
     // Used for:
@@ -118,6 +147,14 @@ const resolvers: Resolvers = {
         );
       });
       return foundAppointmentsForDay;
+    },
+    email: async (parent, _, { user, permissions }) => {
+      if (user && permissions) {
+        if (user.email === parent.email && permissions.includes('read:contactInfo')) {
+          return parent.email;
+        }
+      }
+      throw new AuthenticationError('Unauthorized');
     },
   },
 };
