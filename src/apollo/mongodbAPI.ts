@@ -41,9 +41,10 @@ class MongodbAPI extends DataSource {
     if (date) {
       // date: yyyy-mm-dd
       const [year, month, day] = date.split('-');
+      // Subtracting 1 from month because in Date.UTC months start from 0
       searchCriteria.time = {
-        $gte: new Date(Date.UTC(+year, +month, +day)),
-        $lt: new Date(Date.UTC(+year, +month, +day + 1)),
+        $gte: new Date(Date.UTC(+year, +month - 1, +day)),
+        $lt: new Date(Date.UTC(+year, +month - 1, +day + 1)),
       };
     }
     if (barberID) {
