@@ -9,6 +9,7 @@ export enum ServiceName {
   Junior = 'JUNIOR',
 }
 
+// The form of data passed as query argument
 export interface Appointment {
   duration: number;
   email: string;
@@ -18,26 +19,32 @@ export interface Appointment {
   };
   phoneNumber: string;
   serviceName: ServiceName;
-  time: string | Date;
+  time: string;
   barberID: Types.ObjectId;
 }
 
-export interface AppointmentDocumentObject extends Appointment {
+// The form of data passed to MongoDB
+export interface AppointmentInput extends Omit<Appointment, 'time'> {
+  time: Date;
+}
+
+// The form of a MongoDB document converted to object
+export interface AppointmentDocumentObject extends Omit<Appointment, 'time'> {
+  time: Date;
   fullName: string;
   id: string;
 }
 
+// The form of a MongoDB document
 export interface AppointmentDocument extends AppointmentDocumentObject, Document {
   id: string;
-  time: Date;
 }
 
 export interface AppointmentDocumentPopulated
   extends Omit<AppointmentDocumentObject, 'barberID'>,
     Document {
-  barberID: BarberDocument;
   id: string;
-  time: Date;
+  barberID: BarberDocument;
 }
 
 const AppointmentSchema: Schema<AppointmentDocument, Model<AppointmentDocument>> = new Schema({

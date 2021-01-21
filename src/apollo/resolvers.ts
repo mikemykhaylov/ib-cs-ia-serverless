@@ -9,6 +9,8 @@ import MongodbAPI, {
   GetAppointmentsInput,
   GetBarberInput,
   GetBarbersInput,
+  UpdateAppointmentInput,
+  UpdateBarberInput,
 } from './mongodbAPI';
 
 type Resolver<Parent, Args, Result> = (
@@ -32,12 +34,15 @@ interface Resolvers extends IResolvers {
   Mutation: {
     createAppointment: Resolver<undefined, CreateAppointmentInput, AppointmentDocumentObject>;
     createBarber: Resolver<undefined, CreateBarberInput, BarberDocument>;
+    updateAppointment: Resolver<undefined, UpdateAppointmentInput, AppointmentDocumentObject>;
+    updateBarber: Resolver<undefined, UpdateBarberInput, BarberDocument>;
   };
   Appointment: {
     barber: Resolver<AppointmentDocumentObject, null, BarberDocument>;
     fullName: Resolver<AppointmentDocumentObject, null, string>;
     email: Resolver<AppointmentDocumentObject, null, string>;
     phoneNumber: Resolver<AppointmentDocumentObject, null, string>;
+    time(parent: AppointmentDocumentObject): string;
   };
   Barber: {
     appointments: Resolver<BarberDocument, { date: string }, AppointmentDocumentObject[]>;
@@ -53,7 +58,7 @@ const protectedAppointmentProperty: (
       const assignedBarber = (await dataSources.mongodbAPI.getBarber({
         email: user.email,
       })) as BarberDocument;
-      if (user.email === assignedBarber.email && permissions.includes('read:contactInfo')) {
+      if (user.email === assignedBarber.email && permissions.includes('read:appointments_data')) {
         return parent[property];
       }
     }
@@ -99,10 +104,22 @@ const resolvers: Resolvers = {
       return createdAppointment;
     },
     // Used for:
-    // 1) Creating a barber (dev use)
+    // 1) Creating a barber (used in Auth0 Hook)
     createBarber: async (_, args, { dataSources }) => {
       const createdBarber = await dataSources.mongodbAPI.createBarber(args);
       return createdBarber;
+    },
+    // Used for:
+    // 1) Updating an appointment (dev use)
+    updateAppointment: async (_, args, { dataSources }) => {
+      const updatedAppointment = await dataSources.mongodbAPI.updateAppointment(args);
+      return updatedAppointment;
+    },
+    // Used for:
+    // 1) Updating a barber (used in Dashboard)
+    updateBarber: async (_, args, { dataSources }) => {
+      const updatedBarber = await dataSources.mongodbAPI.updateBarber(args);
+      return updatedBarber;
     },
   },
   Appointment: {
@@ -117,10 +134,11 @@ const resolvers: Resolvers = {
     fullName: protectedAppointmentProperty('fullName'),
     email: protectedAppointmentProperty('email'),
     phoneNumber: protectedAppointmentProperty('phoneNumber'),
+    time: (parent) => new Date(parent.time).toISOString(),
   },
   Barber: {
     // Used for:
-    // 1) Listing all appointments of specific barber for date from barber's appointmentIDS (used in Dashboard)
+    // 1) Listing all appointments of specific barber for date from barber's appointmentIDS (dev use)
     appointments: async (parent, args, { dataSources }) => {
       const foundAppointmentsPromises = parent.appointmentIDS.map((appointmentID) => {
         return dataSources.mongodbAPI.getAppointment({
@@ -150,7 +168,7 @@ const resolvers: Resolvers = {
     },
     email: async (parent, _, { user, permissions }) => {
       if (user && permissions) {
-        if (user.email === parent.email && permissions.includes('read:contactInfo')) {
+        if (user.email === parent.email && permissions.includes('read:barber_data')) {
           return parent.email;
         }
       }
