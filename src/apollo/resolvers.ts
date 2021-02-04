@@ -1,16 +1,17 @@
 import { AuthenticationError, IResolvers } from 'apollo-server-lambda';
+import got from 'got/dist/source';
 import { Auth0ManagementToken } from '../handlers';
 import { AppointmentDocumentObject } from '../models/Appointment';
 import { BarberDocument, BarberDocumentPopulated } from '../models/Barber';
 import MongodbAPI, {
-  CreateAppointmentInput,
-  CreateBarberInput,
-  GetAppointmentInput,
-  GetAppointmentsInput,
-  GetBarberInput,
-  GetBarbersInput,
-  UpdateAppointmentInput,
-  UpdateBarberInput,
+  CreateAppointmentApiInput,
+  CreateBarberApiInput,
+  GetAppointmentApiInput,
+  GetAppointmentsApiInput,
+  GetBarberApiInput,
+  GetBarbersApiInput,
+  UpdateAppointmentApiInput,
+  UpdateBarberApiInput,
 } from './mongodbAPI';
 
 type Resolver<Parent, Args, Result> = (
@@ -18,24 +19,24 @@ type Resolver<Parent, Args, Result> = (
   args: Args,
   context: {
     dataSources: { mongodbAPI: MongodbAPI };
-    user?: { email: string };
-    permissions?: string[];
-    managementToken: Auth0ManagementToken;
+    user?: { email: string; id: string; mongoId: string; permissions?: string[] };
+    managementToken?: Auth0ManagementToken;
+    domain?: string;
   },
 ) => Promise<Result>;
 
 interface Resolvers extends IResolvers {
   Query: {
-    appointments: Resolver<undefined, GetAppointmentsInput, AppointmentDocumentObject[]>;
-    appointment: Resolver<undefined, GetAppointmentInput, AppointmentDocumentObject | undefined>;
-    barbers: Resolver<undefined, GetBarbersInput, (BarberDocument | BarberDocumentPopulated)[]>;
-    barber: Resolver<undefined, GetBarberInput, BarberDocument | undefined>;
+    appointments: Resolver<undefined, GetAppointmentsApiInput, AppointmentDocumentObject[]>;
+    appointment: Resolver<undefined, GetAppointmentApiInput, AppointmentDocumentObject | undefined>;
+    barbers: Resolver<undefined, GetBarbersApiInput, (BarberDocument | BarberDocumentPopulated)[]>;
+    barber: Resolver<undefined, GetBarberApiInput, BarberDocument | undefined>;
   };
   Mutation: {
-    createAppointment: Resolver<undefined, CreateAppointmentInput, AppointmentDocumentObject>;
-    createBarber: Resolver<undefined, CreateBarberInput, BarberDocument>;
-    updateAppointment: Resolver<undefined, UpdateAppointmentInput, AppointmentDocumentObject>;
-    updateBarber: Resolver<undefined, UpdateBarberInput, BarberDocument>;
+    createAppointment: Resolver<undefined, CreateAppointmentApiInput, AppointmentDocumentObject>;
+    createBarber: Resolver<undefined, CreateBarberApiInput, BarberDocument>;
+    updateAppointment: Resolver<undefined, UpdateAppointmentApiInput, AppointmentDocumentObject>;
+    updateBarber: Resolver<undefined, UpdateBarberApiInput, BarberDocument>;
   };
   Appointment: {
     barber: Resolver<AppointmentDocumentObject, null, BarberDocument>;
@@ -53,12 +54,12 @@ interface Resolvers extends IResolvers {
 const protectedAppointmentProperty: (
   property: 'email' | 'fullName' | 'phoneNumber',
 ) => Resolver<AppointmentDocumentObject, null, string> = (property) => {
-  return async (parent, _, { dataSources, user, permissions }) => {
-    if (user && permissions) {
+  return async (parent, _, { dataSources, user }) => {
+    if (user?.permissions?.includes('read:appointments_data')) {
       const assignedBarber = (await dataSources.mongodbAPI.getBarber({
         email: user.email,
       })) as BarberDocument;
-      if (user.email === assignedBarber.email && permissions.includes('read:appointments_data')) {
+      if (user.email === assignedBarber.email) {
         return parent[property];
       }
     }
@@ -105,6 +106,7 @@ const resolvers: Resolvers = {
     },
     // Used for:
     // 1) Creating a barber (used in Auth0 Hook)
+    // TODO: Secure this, use create:barber
     createBarber: async (_, args, { dataSources }) => {
       const createdBarber = await dataSources.mongodbAPI.createBarber(args);
       return createdBarber;
@@ -117,9 +119,30 @@ const resolvers: Resolvers = {
     },
     // Used for:
     // 1) Updating a barber (used in Dashboard)
-    updateBarber: async (_, args, { dataSources }) => {
-      const updatedBarber = await dataSources.mongodbAPI.updateBarber(args);
-      return updatedBarber;
+    updateBarber: async (_, args, { dataSources, managementToken, user, domain }) => {
+      // Checking if:
+      // 1) Logged in barber is the same barber he's trying to update (comparing mongoIDs)
+      // 2) Logged in barber has permissions to update barbers (formality)
+      // 3) Management token is present (formality)
+      if (
+        user?.mongoId === args.barberID &&
+        user?.permissions?.includes('update:barber') &&
+        managementToken &&
+        domain
+      ) {
+        const updatedBarber = await dataSources.mongodbAPI.updateBarber(args);
+        await got.patch(encodeURI(`${domain}/api/v2/users/${user.id}`), {
+          json: {
+            name: `${args.input.name?.first} ${args.input.name?.last}`,
+            picture: args.input.profileImageURL,
+          },
+          headers: {
+            authorization: `${managementToken.token_type} ${managementToken.access_token}`,
+          },
+        });
+        return updatedBarber;
+      }
+      throw new AuthenticationError('Unauthorized');
     },
   },
   Appointment: {
@@ -131,14 +154,16 @@ const resolvers: Resolvers = {
       })) as BarberDocument;
       return foundBarber;
     },
+
+    // Protected properties
     fullName: protectedAppointmentProperty('fullName'),
     email: protectedAppointmentProperty('email'),
     phoneNumber: protectedAppointmentProperty('phoneNumber'),
-    time: (parent) => new Date(parent.time).toISOString(),
+    time: (parent) => parent.time.toISOString(),
   },
   Barber: {
     // Used for:
-    // 1) Listing all appointments of specific barber for date from barber's appointmentIDS (dev use)
+    // 1) Listing all appointments of specific barber for date from barber's appointmentIDS (used in Dashboard)
     appointments: async (parent, args, { dataSources }) => {
       const foundAppointmentsPromises = parent.appointmentIDS.map((appointmentID) => {
         return dataSources.mongodbAPI.getAppointment({
@@ -166,11 +191,9 @@ const resolvers: Resolvers = {
       });
       return foundAppointmentsForDay;
     },
-    email: async (parent, _, { user, permissions }) => {
-      if (user && permissions) {
-        if (user.email === parent.email && permissions.includes('read:barber_data')) {
-          return parent.email;
-        }
+    email: async (parent, _, { user }) => {
+      if (user?.email === parent.email && user?.permissions?.includes('read:barber_data')) {
+        return parent.email;
       }
       throw new AuthenticationError('Unauthorized');
     },

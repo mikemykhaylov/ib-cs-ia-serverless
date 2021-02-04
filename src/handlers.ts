@@ -28,7 +28,6 @@ interface Auth0AuthToken extends JWTVerifyResult {
 }
 
 interface Auth0AuthTokenPayload extends JWTPayload {
-  azp: string;
   scope: string;
   permissions: string[];
 }
@@ -50,6 +49,7 @@ const server = new ApolloServer({
   context: async ({ event: req }: { event: AWSLambda.APIGatewayProxyEventV2 }) => {
     if (req.headers.Authorization) {
       const domain = 'https://dev-q6a92igd.eu.auth0.com';
+      // Retrieving and validating ACCESS token
       const token = req.headers.Authorization.split(' ')[1] || '';
       const JWKS = createRemoteJWKSet(new URL(`${domain}/.well-known/jwks.json`));
       try {
@@ -57,6 +57,7 @@ const server = new ApolloServer({
           issuer: `${domain}/`,
           audience: 'https://u06740719i.execute-api.eu-central-1.amazonaws.com/dev/graphql',
         })) as Auth0AuthToken;
+        // If successful, we get MANAGEMENT token from Auth0 by Cyberpunk Barbershop Server app...
         const managementToken: Auth0ManagementToken = await got
           .post('https://dev-q6a92igd.eu.auth0.com/oauth/token', {
             json: {
@@ -67,17 +68,31 @@ const server = new ApolloServer({
             },
           })
           .json();
-        const user: { email: string } = await got
-          .get(
-            `${domain}/api/v2/users/${encodeURI(payload.sub!)}?fields=email&include_fields=true`,
-            {
-              headers: {
-                authorization: `${managementToken.token_type} ${managementToken.access_token}`,
-              },
+        // And request additional information about the user: email and metadata.mongoId
+        const user: {
+          email: string;
+          user_metadata: { mongoId: string };
+        } = await got
+          .get(`${domain}/api/v2/users/${payload.sub}`, {
+            headers: {
+              authorization: `${managementToken.token_type} ${managementToken.access_token}`,
             },
-          )
+            searchParams: {
+              fields: 'email,user_metadata',
+              include_fields: 'true',
+            },
+          })
           .json();
-        return { managementToken, user, permissions: payload.permissions };
+        return {
+          managementToken,
+          user: {
+            email: user.email,
+            mongoId: user.user_metadata.mongoId,
+            permissions: payload.permissions,
+            id: payload.sub,
+          },
+          domain,
+        };
       } catch (err) {
         console.log(err);
         return {};

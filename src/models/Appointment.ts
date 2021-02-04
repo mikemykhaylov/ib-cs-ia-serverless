@@ -1,7 +1,7 @@
 import mongoose, { Model, Schema, Types, Document } from 'mongoose';
 import { BarberDocument } from './Barber';
 
-export enum ServiceName {
+enum ServiceName {
   Haircut = 'HAIRCUT',
   Shaving = 'SHAVING',
   Combo = 'COMBO',
@@ -9,8 +9,8 @@ export enum ServiceName {
   Junior = 'JUNIOR',
 }
 
-// The form of data passed as query argument
-export interface Appointment {
+// Data passed as GraphQl argument to createAppointment mutation
+export interface CreateAppointmentInput {
   duration: number;
   email: string;
   name: {
@@ -23,23 +23,48 @@ export interface Appointment {
   barberID: Types.ObjectId;
 }
 
-// The form of data passed to MongoDB
-export interface AppointmentInput extends Omit<Appointment, 'time'> {
-  time: Date;
+// Data passed as GraphQl argument to updateAppointment mutation
+export interface UpdateAppointmentInput {
+  duration?: number;
+  email?: string;
+  name?: {
+    first: string;
+    last: string;
+  };
+  phoneNumber?: string;
+  serviceName?: ServiceName;
+  time?: string;
+  barberID?: Types.ObjectId;
 }
 
-// The form of a MongoDB document converted to object
-export interface AppointmentDocumentObject extends Omit<Appointment, 'time'> {
+// Data passed as Mongoose.create argument
+// Appointments need a separate interface for mongoose because
+// they have a time property of type Date, which has to be converted to Date
+// before creating a document in the database
+export interface CreateAppointmentMongoInput extends Omit<CreateAppointmentInput, 'time'> {
+  time: Date;
+}
+// Data passed as Mongoose.update argument
+// Appointments need a separate interface for mongoose because
+// they have a time property of type Date, which has to be converted to Date
+// before updating a document in the database
+export interface UpdateAppointmentMongoInput extends Omit<UpdateAppointmentInput, 'time'> {
+  time?: Date;
+}
+
+// MongoDB document converted to object
+export interface AppointmentDocumentObject extends Omit<CreateAppointmentInput, 'time'> {
   time: Date;
   fullName: string;
   id: string;
 }
 
-// The form of a MongoDB document
+// Unpopulated MongoDB document
 export interface AppointmentDocument extends AppointmentDocumentObject, Document {
   id: string;
 }
 
+// Populated MongoDB document
 export interface AppointmentDocumentPopulated
   extends Omit<AppointmentDocumentObject, 'barberID'>,
     Document {
@@ -47,6 +72,7 @@ export interface AppointmentDocumentPopulated
   barberID: BarberDocument;
 }
 
+// MongoDB schema
 const AppointmentSchema: Schema<AppointmentDocument, Model<AppointmentDocument>> = new Schema({
   duration: { type: String, required: true },
   email: String,

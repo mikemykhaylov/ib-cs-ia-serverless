@@ -8,10 +8,10 @@ const typeDefs = gql`
     barber(barberID: ID, email: String): Barber!
   }
   type Mutation {
-    createAppointment(input: AppointmentInput!): Appointment!
-    createBarber(input: BarberInput!): Barber!
-    updateAppointment(appointmentID: ID!, input: AppointmentInput!): Appointment!
-    updateBarber(barberID: ID!, input: BarberInput!): Barber!
+    createAppointment(input: CreateAppointmentInput!): Appointment!
+    createBarber(input: CreateBarberInput!): Barber!
+    updateAppointment(appointmentID: ID!, input: UpdateAppointmentInput!): Appointment!
+    updateBarber(barberID: ID!, input: UpdateBarberInput!): Barber!
   }
   type Barber {
     email: String!
@@ -31,7 +31,7 @@ const typeDefs = gql`
     time: String!
     barber: Barber!
   }
-  input AppointmentInput {
+  input CreateAppointmentInput {
     duration: Int!
     email: String!
     name: Name!
@@ -40,11 +40,25 @@ const typeDefs = gql`
     time: String!
     barberID: ID!
   }
-  input BarberInput {
+  input UpdateAppointmentInput {
+    duration: Int
+    email: String
+    name: Name
+    phoneNumber: String
+    serviceName: Service
+    time: String
+    barberID: ID
+  }
+  input CreateBarberInput {
     email: String!
     name: Name!
     profileImageURL: String!
     specialisation: Specialisation!
+  }
+  input UpdateBarberInput {
+    name: Name
+    profileImageURL: String
+    specialisation: Specialisation
     completed: Boolean
   }
   input Name {

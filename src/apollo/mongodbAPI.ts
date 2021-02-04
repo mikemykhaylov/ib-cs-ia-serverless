@@ -1,13 +1,20 @@
 import { DataSource } from 'apollo-datasource';
 import { UserInputError } from 'apollo-server-lambda';
-import mongoose, { Types } from 'mongoose';
+import { Types } from 'mongoose';
 import AppointmentModel, {
-  Appointment,
   AppointmentDocument,
   AppointmentDocumentObject,
-  AppointmentInput,
+  CreateAppointmentInput,
+  UpdateAppointmentInput,
+  CreateAppointmentMongoInput,
+  UpdateAppointmentMongoInput,
 } from '../models/Appointment';
-import BarberModel, { Barber, BarberDocument, BarberDocumentPopulated } from '../models/Barber';
+import BarberModel, {
+  BarberDocument,
+  BarberDocumentPopulated,
+  CreateBarberInput,
+  UpdateBarberInput,
+} from '../models/Barber';
 
 const mongoDocToObject: (appointment: AppointmentDocument) => AppointmentDocumentObject = (
   appointment,
@@ -17,20 +24,20 @@ const mongoDocToObject: (appointment: AppointmentDocument) => AppointmentDocumen
   return appointmentObject;
 };
 
-export type GetAppointmentsInput = { barberID?: string; date?: string };
-export type GetAppointmentInput = { appointmentID: string };
-export type GetBarbersInput = { dateTime: string };
-export type GetBarberInput = { barberID?: string; email?: string };
-export type CreateAppointmentInput = { input: Appointment };
-export type CreateBarberInput = { input: Barber };
-export type UpdateAppointmentInput = { appointmentID: string; input: Appointment };
-export type UpdateBarberInput = { barberID: string; input: Barber };
+export type GetAppointmentsApiInput = { barberID?: string; date?: string };
+export type GetAppointmentApiInput = { appointmentID: string };
+export type GetBarbersApiInput = { dateTime?: string };
+export type GetBarberApiInput = { barberID?: string; email?: string };
+export type CreateAppointmentApiInput = { input: CreateAppointmentInput };
+export type CreateBarberApiInput = { input: CreateBarberInput };
+export type UpdateAppointmentApiInput = { appointmentID: string; input: UpdateAppointmentInput };
+export type UpdateBarberApiInput = { barberID: string; input: UpdateBarberInput };
 
 class MongodbAPI extends DataSource {
   async getAppointments({
     barberID,
     date,
-  }: GetAppointmentsInput): Promise<AppointmentDocumentObject[]> {
+  }: GetAppointmentsApiInput): Promise<AppointmentDocumentObject[]> {
     const searchCriteria: {
       barberID?: Types.ObjectId;
       time?: {
@@ -49,7 +56,7 @@ class MongodbAPI extends DataSource {
       };
     }
     if (barberID) {
-      searchCriteria.barberID = mongoose.Types.ObjectId(barberID);
+      searchCriteria.barberID = Types.ObjectId(barberID);
     }
     const foundAppointments = await AppointmentModel.find(searchCriteria);
     return Array.isArray(foundAppointments) ? foundAppointments.map(mongoDocToObject) : [];
@@ -57,7 +64,7 @@ class MongodbAPI extends DataSource {
 
   async getAppointment({
     appointmentID,
-  }: GetAppointmentInput): Promise<AppointmentDocumentObject | undefined> {
+  }: GetAppointmentApiInput): Promise<AppointmentDocumentObject | undefined> {
     try {
       const foundAppointment = await AppointmentModel.findById(appointmentID);
       if (foundAppointment) {
@@ -70,7 +77,7 @@ class MongodbAPI extends DataSource {
 
   async getBarbers({
     dateTime,
-  }: GetBarbersInput): Promise<Array<BarberDocument | BarberDocumentPopulated>> {
+  }: GetBarbersApiInput): Promise<Array<BarberDocument | BarberDocumentPopulated>> {
     //! The only time we populate an ID field
     // Other times ID is passed from prev resolver and we make a separate request
     let barbersRequest = BarberModel.find({ completed: true });
@@ -93,7 +100,7 @@ class MongodbAPI extends DataSource {
     }
   }
 
-  async getBarber({ barberID, email }: GetBarberInput): Promise<BarberDocument | undefined> {
+  async getBarber({ barberID, email }: GetBarberApiInput): Promise<BarberDocument | undefined> {
     let foundBarber: BarberDocument | null = null;
     if (barberID) {
       foundBarber = await BarberModel.findById(barberID);
@@ -106,14 +113,16 @@ class MongodbAPI extends DataSource {
     throw new UserInputError('Barber not found');
   }
 
-  async createAppointment({ input }: CreateAppointmentInput): Promise<AppointmentDocumentObject> {
+  async createAppointment({
+    input,
+  }: CreateAppointmentApiInput): Promise<AppointmentDocumentObject> {
     // Checking if the barber with said ID exists
     const assignedBarber = await BarberModel.findById(input.barberID);
     if (!assignedBarber) {
       throw new UserInputError('Barber ID is invalid');
     }
 
-    const appointmentData: AppointmentInput = { ...input, time: new Date(input.time) };
+    const appointmentData: CreateAppointmentMongoInput = { ...input, time: new Date(input.time) };
     const createdAppointment = await AppointmentModel.create(appointmentData);
     // Add appointment ID to barber's appointmentIDS array
     await BarberModel.findByIdAndUpdate(input.barberID, {
@@ -122,7 +131,7 @@ class MongodbAPI extends DataSource {
     return mongoDocToObject(createdAppointment);
   }
 
-  async createBarber({ input }: CreateBarberInput): Promise<BarberDocument> {
+  async createBarber({ input }: CreateBarberApiInput): Promise<BarberDocument> {
     const createdBarber = await BarberModel.create(input);
     return createdBarber;
   }
@@ -130,11 +139,15 @@ class MongodbAPI extends DataSource {
   async updateAppointment({
     appointmentID,
     input,
-  }: UpdateAppointmentInput): Promise<AppointmentDocumentObject> {
-    const appointmentData: AppointmentInput = { ...input, time: new Date(input.time) };
+  }: UpdateAppointmentApiInput): Promise<AppointmentDocumentObject> {
+    const appointmentData: UpdateAppointmentMongoInput = {
+      ...input,
+      time: input.time ? new Date(input.time) : undefined,
+    };
     const updatedAppointment = await AppointmentModel.findByIdAndUpdate(
       appointmentID,
       appointmentData,
+      { new: true },
     );
     if (updatedAppointment) {
       return mongoDocToObject(updatedAppointment);
@@ -142,8 +155,8 @@ class MongodbAPI extends DataSource {
     throw new UserInputError('Appointment not found');
   }
 
-  async updateBarber({ barberID, input }: UpdateBarberInput): Promise<BarberDocument> {
-    const updatedBarber = await BarberModel.findByIdAndUpdate(barberID, input);
+  async updateBarber({ barberID, input }: UpdateBarberApiInput): Promise<BarberDocument> {
+    const updatedBarber = await BarberModel.findByIdAndUpdate(barberID, input, { new: true });
     if (updatedBarber) {
       return updatedBarber;
     }
