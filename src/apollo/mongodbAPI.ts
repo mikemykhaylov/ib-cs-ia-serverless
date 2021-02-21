@@ -58,7 +58,11 @@ class MongodbAPI extends DataSource {
     if (barberID) {
       searchCriteria.barberID = Types.ObjectId(barberID);
     }
-    const foundAppointments = await AppointmentModel.find(searchCriteria);
+
+    // Executing query with sorting by date ASC
+    const foundAppointments = await AppointmentModel.find(searchCriteria, null, {
+      sort: { time: 1 },
+    });
     return Array.isArray(foundAppointments) ? foundAppointments.map(mongoDocToObject) : [];
   }
 

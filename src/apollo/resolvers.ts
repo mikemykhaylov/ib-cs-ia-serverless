@@ -176,7 +176,10 @@ const resolvers: Resolvers = {
 
       // Checking if args is an empty object
       if (Object.keys(args).length === 0 && args.constructor === Object) {
-        return foundAppointments;
+        // Returning all appointments sorted by date ASC
+        return foundAppointments.sort(function (a, b) {
+          return a.time < b.time ? -1 : a.time > b.time ? 1 : 0;
+        });
       }
 
       const foundAppointmentsForDay = foundAppointments.filter((appointment) => {
@@ -189,7 +192,10 @@ const resolvers: Resolvers = {
           new Date(appointment.time).getTime() < endOfRequestedDate.getTime()
         );
       });
-      return foundAppointmentsForDay;
+      // Returning appointments for day sorted by date ASC
+      return foundAppointmentsForDay.sort(function (a, b) {
+        return a.time < b.time ? -1 : a.time > b.time ? 1 : 0;
+      });
     },
     email: async (parent, _, { user }) => {
       if (user?.email === parent.email && user?.permissions?.includes('read:barber_data')) {
