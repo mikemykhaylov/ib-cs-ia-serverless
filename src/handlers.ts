@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable import/no-unresolved */
 import middy from '@middy/core';
 import { ApolloServer } from 'apollo-server-lambda';
