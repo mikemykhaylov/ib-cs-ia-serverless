@@ -27,6 +27,10 @@ provider:
 functions:
   graphql:
     handler: src/index.graphql
+    environment:
+      DB: ${param:dbURL}
+      CLIENT_ID: ${param:clientIDGraphQL}
+      CLIENT_SECRET: ${param:clientSecretGraphQL}
     events:
       - http:
           path: graphql
@@ -38,6 +42,9 @@ functions:
           cors: true
   handleImageUpload:
     handler: src/index.handleImageUpload
+    environment:
+      CLIENT_ID: ${param:clientIDImageUpload}
+      CLIENT_SECRET: ${param:clientSecretImageUpload}
     events:
       - s3:
           bucket: ib-cyberpunk-barbershop-data
