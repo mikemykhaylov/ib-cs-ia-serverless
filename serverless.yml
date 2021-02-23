@@ -4,8 +4,24 @@ provider:
   name: aws
   runtime: nodejs12.x
   region: eu-central-1
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+            - s3:DeleteObject
+          Resource: "arn:aws:s3:::ib-cyberpunk-barbershop-data/*"
+        - Effect: Allow
+          Action:
+            - s3:ListBucket
+          Resource: "arn:aws:s3:::ib-cyberpunk-barbershop-data"
+  lambdaHashingVersion: 20201221
   apiGateway:
     shouldStartNameWithService: true
+  tracing:
+    lambda: true
 functions:
   graphql:
     handler: src/index.graphql
