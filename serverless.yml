@@ -18,6 +18,12 @@ functions:
           path: graphql
           method: get
           cors: true
+  handleImageUpload:
+    handler: src/handleImageUpload/handlers.handleImageUpload
+    events:
+      - s3:
+          bucket: ib-cyberpunk-barbershop-data
+          event: s3:ObjectCreated:Put
 custom:
   contentCompression: 1024
   webpack:
