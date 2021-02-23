@@ -126,7 +126,7 @@ const resolvers: Resolvers = {
       if (user?.permissions?.includes('create:barber')) {
         const command = new PutObjectCommand({
           Bucket: bucketName,
-          Key: `${uuidv4()}.${args.fileExtension}`,
+          Key: `uploads/${uuidv4()}.${args.fileExtension}`,
         });
         const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
         return url;
