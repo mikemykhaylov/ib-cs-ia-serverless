@@ -52,10 +52,11 @@ const typeDefs = gql`
   input CreateBarberInput {
     email: String!
     name: Name!
-    profileImageURL: String!
     specialisation: Specialisation!
+    password: String!
   }
   input UpdateBarberInput {
+    email: String
     name: Name
     profileImageURL: String
     specialisation: Specialisation

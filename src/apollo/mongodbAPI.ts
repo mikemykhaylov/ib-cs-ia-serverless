@@ -13,6 +13,7 @@ import BarberModel, {
   BarberDocument,
   BarberDocumentPopulated,
   CreateBarberInput,
+  CreateBarberMongoInput,
   UpdateBarberInput,
 } from '../models/Barber';
 
@@ -24,20 +25,34 @@ const mongoDocToObject: (appointment: AppointmentDocument) => AppointmentDocumen
   return appointmentObject;
 };
 
-export type GetAppointmentsApiInput = { barberID?: string; date?: string };
-export type GetAppointmentApiInput = { appointmentID: string };
-export type GetBarbersApiInput = { dateTime?: string };
-export type GetBarberApiInput = { barberID?: string; email?: string };
-export type CreateAppointmentApiInput = { input: CreateAppointmentInput };
-export type CreateBarberApiInput = { input: CreateBarberInput };
-export type UpdateAppointmentApiInput = { appointmentID: string; input: UpdateAppointmentInput };
-export type UpdateBarberApiInput = { barberID: string; input: UpdateBarberInput };
+export type CreateAppointmentGraphQLApiInput = { input: CreateAppointmentInput };
+export type GetAppointmentsGraphQLApiInput = { barberID?: string; date?: string };
+export type GetAppointmentGraphQLApiInput = { appointmentID: string };
+export type UpdateAppointmentGraphQLApiInput = {
+  appointmentID: string;
+  input: UpdateAppointmentInput;
+};
+
+export type CreateBarberGraphQLApiInput = { input: CreateBarberInput };
+export type GetBarbersGraphQLApiInput = { dateTime?: string };
+export type GetBarberGraphQLApiInput = { barberID?: string; email?: string };
+export type UpdateBarberGraphQLApiInput = { barberID: string; input: UpdateBarberInput };
+
+export type CreateAppointmentMongoApiInput = CreateAppointmentGraphQLApiInput;
+export type GetAppointmentsMongoApiInput = GetAppointmentsGraphQLApiInput;
+export type GetAppointmentMongoApiInput = GetAppointmentGraphQLApiInput;
+export type UpdateAppointmentMongoApiInput = UpdateAppointmentGraphQLApiInput;
+
+export type CreateBarberMongoApiInput = { input: CreateBarberMongoInput };
+export type GetBarbersMongoApiInput = GetBarbersGraphQLApiInput;
+export type GetBarberMongoApiInput = GetBarberGraphQLApiInput;
+export type UpdateBarberMongoApiInput = UpdateBarberGraphQLApiInput;
 
 class MongodbAPI extends DataSource {
   async getAppointments({
     barberID,
     date,
-  }: GetAppointmentsApiInput): Promise<AppointmentDocumentObject[]> {
+  }: GetAppointmentsMongoApiInput): Promise<AppointmentDocumentObject[]> {
     const searchCriteria: {
       barberID?: Types.ObjectId;
       time?: {
@@ -68,7 +83,7 @@ class MongodbAPI extends DataSource {
 
   async getAppointment({
     appointmentID,
-  }: GetAppointmentApiInput): Promise<AppointmentDocumentObject | undefined> {
+  }: GetAppointmentMongoApiInput): Promise<AppointmentDocumentObject | undefined> {
     try {
       const foundAppointment = await AppointmentModel.findById(appointmentID);
       if (foundAppointment) {
@@ -81,7 +96,7 @@ class MongodbAPI extends DataSource {
 
   async getBarbers({
     dateTime,
-  }: GetBarbersApiInput): Promise<Array<BarberDocument | BarberDocumentPopulated>> {
+  }: GetBarbersMongoApiInput): Promise<Array<BarberDocument | BarberDocumentPopulated>> {
     //! The only time we populate an ID field
     // Other times ID is passed from prev resolver and we make a separate request
     let barbersRequest = BarberModel.find();
@@ -104,7 +119,10 @@ class MongodbAPI extends DataSource {
     }
   }
 
-  async getBarber({ barberID, email }: GetBarberApiInput): Promise<BarberDocument | undefined> {
+  async getBarber({
+    barberID,
+    email,
+  }: GetBarberMongoApiInput): Promise<BarberDocument | undefined> {
     let foundBarber: BarberDocument | null = null;
     if (barberID) {
       foundBarber = await BarberModel.findById(barberID);
@@ -119,7 +137,7 @@ class MongodbAPI extends DataSource {
 
   async createAppointment({
     input,
-  }: CreateAppointmentApiInput): Promise<AppointmentDocumentObject> {
+  }: CreateAppointmentMongoApiInput): Promise<AppointmentDocumentObject> {
     // Checking if the barber with said ID exists
     const assignedBarber = await BarberModel.findById(input.barberID);
     if (!assignedBarber) {
@@ -135,7 +153,7 @@ class MongodbAPI extends DataSource {
     return mongoDocToObject(createdAppointment);
   }
 
-  async createBarber({ input }: CreateBarberApiInput): Promise<BarberDocument> {
+  async createBarber({ input }: CreateBarberMongoApiInput): Promise<BarberDocument> {
     const createdBarber = await BarberModel.create(input);
     return createdBarber;
   }
@@ -143,7 +161,7 @@ class MongodbAPI extends DataSource {
   async updateAppointment({
     appointmentID,
     input,
-  }: UpdateAppointmentApiInput): Promise<AppointmentDocumentObject> {
+  }: UpdateAppointmentMongoApiInput): Promise<AppointmentDocumentObject> {
     const appointmentData: UpdateAppointmentMongoInput = {
       ...input,
       time: input.time ? new Date(input.time) : undefined,
@@ -159,7 +177,7 @@ class MongodbAPI extends DataSource {
     throw new UserInputError('Appointment not found');
   }
 
-  async updateBarber({ barberID, input }: UpdateBarberApiInput): Promise<BarberDocument> {
+  async updateBarber({ barberID, input }: UpdateBarberMongoApiInput): Promise<BarberDocument> {
     const updatedBarber = await BarberModel.findByIdAndUpdate(barberID, input, { new: true });
     if (updatedBarber) {
       return updatedBarber;

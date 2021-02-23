@@ -4,14 +4,15 @@ import { Auth0ManagementToken } from '../handlers';
 import { AppointmentDocumentObject } from '../models/Appointment';
 import { BarberDocument, BarberDocumentPopulated } from '../models/Barber';
 import MongodbAPI, {
-  CreateAppointmentApiInput,
-  CreateBarberApiInput,
-  GetAppointmentApiInput,
-  GetAppointmentsApiInput,
-  GetBarberApiInput,
-  GetBarbersApiInput,
-  UpdateAppointmentApiInput,
-  UpdateBarberApiInput,
+  CreateAppointmentGraphQLApiInput,
+  CreateBarberGraphQLApiInput,
+  CreateBarberMongoApiInput,
+  GetAppointmentGraphQLApiInput,
+  GetAppointmentsGraphQLApiInput,
+  GetBarberGraphQLApiInput,
+  GetBarbersGraphQLApiInput,
+  UpdateAppointmentGraphQLApiInput,
+  UpdateBarberGraphQLApiInput,
 } from './mongodbAPI';
 
 type Resolver<Parent, Args, Result> = (
@@ -27,16 +28,32 @@ type Resolver<Parent, Args, Result> = (
 
 interface Resolvers extends IResolvers {
   Query: {
-    appointments: Resolver<undefined, GetAppointmentsApiInput, AppointmentDocumentObject[]>;
-    appointment: Resolver<undefined, GetAppointmentApiInput, AppointmentDocumentObject | undefined>;
-    barbers: Resolver<undefined, GetBarbersApiInput, (BarberDocument | BarberDocumentPopulated)[]>;
-    barber: Resolver<undefined, GetBarberApiInput, BarberDocument | undefined>;
+    appointments: Resolver<undefined, GetAppointmentsGraphQLApiInput, AppointmentDocumentObject[]>;
+    appointment: Resolver<
+      undefined,
+      GetAppointmentGraphQLApiInput,
+      AppointmentDocumentObject | undefined
+    >;
+    barbers: Resolver<
+      undefined,
+      GetBarbersGraphQLApiInput,
+      (BarberDocument | BarberDocumentPopulated)[]
+    >;
+    barber: Resolver<undefined, GetBarberGraphQLApiInput, BarberDocument | undefined>;
   };
   Mutation: {
-    createAppointment: Resolver<undefined, CreateAppointmentApiInput, AppointmentDocumentObject>;
-    createBarber: Resolver<undefined, CreateBarberApiInput, BarberDocument>;
-    updateAppointment: Resolver<undefined, UpdateAppointmentApiInput, AppointmentDocumentObject>;
-    updateBarber: Resolver<undefined, UpdateBarberApiInput, BarberDocument>;
+    createAppointment: Resolver<
+      undefined,
+      CreateAppointmentGraphQLApiInput,
+      AppointmentDocumentObject
+    >;
+    createBarber: Resolver<undefined, CreateBarberGraphQLApiInput, BarberDocument>;
+    updateAppointment: Resolver<
+      undefined,
+      UpdateAppointmentGraphQLApiInput,
+      AppointmentDocumentObject
+    >;
+    updateBarber: Resolver<undefined, UpdateBarberGraphQLApiInput, BarberDocument>;
   };
   Appointment: {
     barber: Resolver<AppointmentDocumentObject, null, BarberDocument>;
@@ -105,11 +122,43 @@ const resolvers: Resolvers = {
       return createdAppointment;
     },
     // Used for:
-    // 1) Creating a barber (used in Auth0 Hook)
-    // TODO: Secure this, use create:barber
-    createBarber: async (_, args, { dataSources }) => {
-      const createdBarber = await dataSources.mongodbAPI.createBarber(args);
-      return createdBarber;
+    // 1) Creating a barber (used in Admin)
+    createBarber: async (_, args, { dataSources, managementToken, user, domain }) => {
+      if (user?.permissions?.includes('create:barber') && managementToken && domain) {
+        const { email, name, specialisation } = args.input;
+        const { user_id: auth0BarberId, picture }: { user_id: string; picture: string } = await got
+          .post(encodeURI(`${domain}/api/v2/users`), {
+            json: {
+              connection: 'Username-Password-Authentication',
+              email: args.input.email,
+              password: args.input.password,
+              name: `${args.input.name.first} ${args.input.name.last}`,
+            },
+            headers: {
+              authorization: `${managementToken.token_type} ${managementToken.access_token}`,
+            },
+          })
+          .json();
+        await got.post(encodeURI(`${domain}/api/v2/roles/rol_5UrTEi3vDUKxTh8L/users`), {
+          json: {
+            users: [auth0BarberId],
+          },
+          headers: {
+            authorization: `${managementToken.token_type} ${managementToken.access_token}`,
+          },
+        });
+        const createBarberMongoArgs: CreateBarberMongoApiInput = {
+          input: {
+            email,
+            name,
+            specialisation,
+            profileImageURL: picture,
+          },
+        };
+        const createdBarber = await dataSources.mongodbAPI.createBarber(createBarberMongoArgs);
+        return createdBarber;
+      }
+      throw new AuthenticationError('Unauthorized');
     },
     // Used for:
     // 1) Updating an appointment (dev use)

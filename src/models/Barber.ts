@@ -7,17 +7,23 @@ enum Specialisation {
 }
 
 // Data passed as GraphQl argument to createBarber mutation
-// Also passed as argument to Mongoose.create
-// Barbers don't need a separate interface for mongoose because
-// there are no weird types in the model (like Date, which has to be passed as Date)
+// Barbers need a separate interface for mongoose because
+// there are properties that we do not wish to store in MongoDB,
+// such as passwords. We do, however need profileImageURL, which is
+// recieved later
 export interface CreateBarberInput {
   email: string;
   name: {
     first: string;
     last: string;
   };
-  profileImageURL: string;
   specialisation: Specialisation;
+  password: string;
+}
+
+// Data passed as argument to Mongoose.create
+export interface CreateBarberMongoInput extends Omit<CreateBarberInput, 'password'> {
+  profileImageURL: string;
 }
 
 // Data passed as GraphQl argument to updateBarber mutation
@@ -25,6 +31,7 @@ export interface CreateBarberInput {
 // Barbers don't need a separate interface for mongoose because
 // there are no weird types in the model (like Date, which has to be passed as Date)
 export interface UpdateBarberInput {
+  email?: string;
   name?: {
     first: string;
     last: string;
@@ -34,9 +41,9 @@ export interface UpdateBarberInput {
 }
 
 // Generic MongoDB document, population of appointmentIDS isnt specified
-// Inherits CreateBarberInput because everything is required there
+// Inherits CreateBarberMongoInput because everything is required there
 // Internal use
-interface BarberBaseDocument extends CreateBarberInput, Document {
+interface BarberBaseDocument extends CreateBarberMongoInput, Document {
   fullName: string;
 }
 
