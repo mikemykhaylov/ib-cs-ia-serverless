@@ -23,7 +23,9 @@ functions:
     events:
       - s3:
           bucket: ib-cyberpunk-barbershop-data
-          event: s3:ObjectCreated:Put
+          event: s3:ObjectCreated:*
+          rules:
+            - prefix: barberProfileImages/
 custom:
   contentCompression: 1024
   webpack:

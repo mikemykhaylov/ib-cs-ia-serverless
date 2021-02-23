@@ -1,7 +1,7 @@
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { AuthenticationError, IResolvers } from 'apollo-server-lambda';
-import got from 'got/dist/source';
+import got from 'got';
 import { Auth0ManagementToken } from '../handlers';
 import { AppointmentDocumentObject } from '../models/Appointment';
 import { BarberDocument, BarberDocumentPopulated } from '../models/Barber';
@@ -126,7 +126,7 @@ const resolvers: Resolvers = {
       if (user?.permissions?.includes('create:barber')) {
         const command = new PutObjectCommand({
           Bucket: bucketName,
-          Key: `uploads/${args.barberID}.${args.fileExtension}`,
+          Key: `barberProfileImages/${args.barberID}.${args.fileExtension}`,
         });
         const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
         return url;
@@ -190,15 +190,39 @@ const resolvers: Resolvers = {
     // 1) Updating a barber (dev use)
     updateBarber: async (_, args, { dataSources, managementToken, user, domain }) => {
       // Checking if:
-      // 1) Logged in barber has permissions to update barbers (admin only)
+      // 1) Logged in barber has permissions to update barbers (admin or image upload handler)
       // 2) Management token is present (formality)
       if (user?.permissions?.includes('update:barber') && managementToken && domain) {
+        // First we update the barber in MongoDB, to retrieve his email
         const updatedBarber = await dataSources.mongodbAPI.updateBarber(args);
-        await got.patch(encodeURI(`${domain}/api/v2/users/${user.id}`), {
-          json: {
-            name: `${args.input.name?.first} ${args.input.name?.last}`,
-            picture: args.input.profileImageURL,
-          },
+
+        // Then we retrieve the Auth0 barber id, because the user.id from context
+        // is either the admin id or image upload handler id
+        const [{ user_id }]: [{ user_id: string }] = await got
+          .get(encodeURI(`${domain}/api/v2/users-by-email`), {
+            searchParams: {
+              email: updatedBarber.email,
+              fields: 'user_id',
+              include: 'true',
+            },
+            headers: {
+              authorization: `${managementToken.token_type} ${managementToken.access_token}`,
+            },
+          })
+          .json();
+
+        // Then we construct the Auth0 update object
+        const auth0UpdateObject: { name?: string; picture?: string } = {};
+        if (args.input.name) {
+          auth0UpdateObject.name = `${args.input.name?.first} ${args.input.name?.last}`;
+        }
+        if (args.input.profileImageURL) {
+          auth0UpdateObject.picture = args.input.profileImageURL;
+        }
+
+        // And update the user with it
+        await got.patch(encodeURI(`${domain}/api/v2/users/${user_id}`), {
+          json: auth0UpdateObject,
           headers: {
             authorization: `${managementToken.token_type} ${managementToken.access_token}`,
           },
