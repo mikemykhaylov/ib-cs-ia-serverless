@@ -8,7 +8,7 @@ provider:
     shouldStartNameWithService: true
 functions:
   graphql:
-    handler: src/graphql/handlers.graphql
+    handler: src/index.graphql
     events:
       - http:
           path: graphql
@@ -19,7 +19,7 @@ functions:
           method: get
           cors: true
   handleImageUpload:
-    handler: src/handleImageUpload/handlers.handleImageUpload
+    handler: src/index.handleImageUpload
     events:
       - s3:
           bucket: ib-cyberpunk-barbershop-data

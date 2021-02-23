@@ -2,7 +2,7 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { AuthenticationError, IResolvers } from 'apollo-server-lambda';
 import got from 'got';
-import { Auth0ManagementToken } from '../handlers';
+import { Auth0ManagementToken } from '../index';
 import { AppointmentDocumentObject } from '../models/Appointment';
 import { BarberDocument, BarberDocumentPopulated } from '../models/Barber';
 import { bucketName, s3Client } from '../utils/awsSetup';
