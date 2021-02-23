@@ -67,18 +67,31 @@ const server = new ApolloServer({
             },
           })
           .json();
-        // And request additional information about the user: email
-        const { email }: { email: string } = await got
-          .get(`${domain}/api/v2/users/${payload.sub}`, {
-            headers: {
-              authorization: `${managementToken.token_type} ${managementToken.access_token}`,
-            },
-            searchParams: {
-              fields: 'email',
-              include_fields: 'true',
-            },
-          })
-          .json();
+
+        // This API is accessible by both users and Machine to Machine connections
+        // The difference between them is in the auditories
+        // Users have an additional auditory : https://dev-q6a92igd.eu.auth0.com/userinfo
+        // So if a machine is calling, we are not requesting the email for several reasons
+        // 1) It is not a user, therefore doesn't have an email
+        // 2) Has only permission to update barber (for now),so it wouldnt be able to access
+        // private properties in the first place
+        // If instead a user is making a request, we request his email from Auth0
+        // Email is only used to protect private barber properties from other barbers
+        let email = '';
+        if (payload.aud?.includes('https://dev-q6a92igd.eu.auth0.com/userinfo')) {
+          const response: { email: string } = await got
+            .get(`${domain}/api/v2/users/${payload.sub}`, {
+              headers: {
+                authorization: `${managementToken.token_type} ${managementToken.access_token}`,
+              },
+              searchParams: {
+                fields: 'email',
+                include_fields: 'true',
+              },
+            })
+            .json();
+          email = response.email;
+        }
         return {
           managementToken,
           user: {
