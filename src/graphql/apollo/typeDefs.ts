@@ -6,7 +6,7 @@ const typeDefs = gql`
     appointment(appointmentID: ID!): Appointment!
     barbers(dateTime: String): [Barber]!
     barber(barberID: ID, email: String): Barber!
-    getSignedURL(fileExtension: String!): String!
+    getSignedURL(barberID: ID!, fileExtension: String!): String!
   }
   type Mutation {
     createAppointment(input: CreateAppointmentInput!): Appointment!

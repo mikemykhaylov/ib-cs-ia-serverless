@@ -2,7 +2,6 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { AuthenticationError, IResolvers } from 'apollo-server-lambda';
 import got from 'got/dist/source';
-import { v4 as uuidv4 } from 'uuid';
 import { Auth0ManagementToken } from '../handlers';
 import { AppointmentDocumentObject } from '../models/Appointment';
 import { BarberDocument, BarberDocumentPopulated } from '../models/Barber';
@@ -31,6 +30,7 @@ type Resolver<Parent, Args, Result> = (
 ) => Promise<Result>;
 
 type GetSignedURLInput = {
+  barberID: string;
   fileExtension: string;
 };
 
@@ -126,7 +126,7 @@ const resolvers: Resolvers = {
       if (user?.permissions?.includes('create:barber')) {
         const command = new PutObjectCommand({
           Bucket: bucketName,
-          Key: `uploads/${uuidv4()}.${args.fileExtension}`,
+          Key: `uploads/${args.barberID}.${args.fileExtension}`,
         });
         const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
         return url;
