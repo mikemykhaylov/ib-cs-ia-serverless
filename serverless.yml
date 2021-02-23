@@ -1,3 +1,5 @@
+org: mmykhaylov
+app: ib-cs-ia-serverless
 service: ib-cyberpunk-barbershop
 frameworkVersion: "2"
 provider:
