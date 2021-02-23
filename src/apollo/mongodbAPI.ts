@@ -5,8 +5,8 @@ import AppointmentModel, {
   AppointmentDocument,
   AppointmentDocumentObject,
   CreateAppointmentInput,
-  UpdateAppointmentInput,
   CreateAppointmentMongoInput,
+  UpdateAppointmentInput,
   UpdateAppointmentMongoInput,
 } from '../models/Appointment';
 import BarberModel, {

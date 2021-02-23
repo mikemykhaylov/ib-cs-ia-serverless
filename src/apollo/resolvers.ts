@@ -1,8 +1,12 @@
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { AuthenticationError, IResolvers } from 'apollo-server-lambda';
 import got from 'got/dist/source';
+import { v4 as uuidv4 } from 'uuid';
 import { Auth0ManagementToken } from '../handlers';
 import { AppointmentDocumentObject } from '../models/Appointment';
 import { BarberDocument, BarberDocumentPopulated } from '../models/Barber';
+import { bucketName, s3Client } from '../utils/awsSetup';
 import MongodbAPI, {
   CreateAppointmentGraphQLApiInput,
   CreateBarberGraphQLApiInput,
@@ -26,6 +30,10 @@ type Resolver<Parent, Args, Result> = (
   },
 ) => Promise<Result>;
 
+type GetSignedURLInput = {
+  fileExtension: string;
+};
+
 interface Resolvers extends IResolvers {
   Query: {
     appointments: Resolver<undefined, GetAppointmentsGraphQLApiInput, AppointmentDocumentObject[]>;
@@ -40,6 +48,7 @@ interface Resolvers extends IResolvers {
       (BarberDocument | BarberDocumentPopulated)[]
     >;
     barber: Resolver<undefined, GetBarberGraphQLApiInput, BarberDocument | undefined>;
+    getSignedURL: Resolver<undefined, GetSignedURLInput, string>;
   };
   Mutation: {
     createAppointment: Resolver<
@@ -112,6 +121,17 @@ const resolvers: Resolvers = {
     barber: async (_, args, { dataSources }) => {
       const foundBarber = await dataSources.mongodbAPI.getBarber(args);
       return foundBarber;
+    },
+    getSignedURL: async (_, args, { user }) => {
+      if (user?.permissions?.includes('create:barber')) {
+        const command = new PutObjectCommand({
+          Bucket: bucketName,
+          Key: `${uuidv4()}.${args.fileExtension}`,
+        });
+        const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+        return url;
+      }
+      throw new AuthenticationError('Unauthorized');
     },
   },
   Mutation: {

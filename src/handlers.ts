@@ -9,7 +9,7 @@ import { JWTVerifyResult } from 'jose/webcrypto/types';
 import MongodbAPI from './apollo/mongodbAPI';
 import resolvers from './apollo/resolvers';
 import typeDefs from './apollo/typeDefs';
-import connectToDatabase from './db';
+import connectToDatabase from './utils/db';
 
 // Generic type for middy middleware for AWS Lambda
 type AWSMiddleware<T> = {
