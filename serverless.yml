@@ -8,7 +8,7 @@ provider:
     shouldStartNameWithService: true
 functions:
   graphql:
-    handler: src/handlers.graphql
+    handler: src/graphql/handlers.graphql
     events:
       - http:
           path: graphql
