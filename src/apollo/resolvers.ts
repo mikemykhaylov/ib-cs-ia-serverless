@@ -19,7 +19,7 @@ type Resolver<Parent, Args, Result> = (
   args: Args,
   context: {
     dataSources: { mongodbAPI: MongodbAPI };
-    user?: { email: string; id: string; mongoId: string; permissions?: string[] };
+    user?: { email: string; id: string; permissions?: string[] };
     managementToken?: Auth0ManagementToken;
     domain?: string;
   },
@@ -118,18 +118,12 @@ const resolvers: Resolvers = {
       return updatedAppointment;
     },
     // Used for:
-    // 1) Updating a barber (used in Dashboard)
+    // 1) Updating a barber (dev use)
     updateBarber: async (_, args, { dataSources, managementToken, user, domain }) => {
       // Checking if:
-      // 1) Logged in barber is the same barber he's trying to update (comparing mongoIDs)
-      // 2) Logged in barber has permissions to update barbers (formality)
-      // 3) Management token is present (formality)
-      if (
-        user?.mongoId === args.barberID &&
-        user?.permissions?.includes('update:barber') &&
-        managementToken &&
-        domain
-      ) {
+      // 1) Logged in barber has permissions to update barbers (admin only)
+      // 2) Management token is present (formality)
+      if (user?.permissions?.includes('update:barber') && managementToken && domain) {
         const updatedBarber = await dataSources.mongodbAPI.updateBarber(args);
         await got.patch(encodeURI(`${domain}/api/v2/users/${user.id}`), {
           json: {

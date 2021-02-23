@@ -67,17 +67,14 @@ const server = new ApolloServer({
             },
           })
           .json();
-        // And request additional information about the user: email and metadata.mongoId
-        const user: {
-          email: string;
-          user_metadata: { mongoId: string };
-        } = await got
+        // And request additional information about the user: email
+        const { email }: { email: string } = await got
           .get(`${domain}/api/v2/users/${payload.sub}`, {
             headers: {
               authorization: `${managementToken.token_type} ${managementToken.access_token}`,
             },
             searchParams: {
-              fields: 'email,user_metadata',
+              fields: 'email',
               include_fields: 'true',
             },
           })
@@ -85,8 +82,7 @@ const server = new ApolloServer({
         return {
           managementToken,
           user: {
-            email: user.email,
-            mongoId: user.user_metadata.mongoId,
+            email,
             permissions: payload.permissions,
             id: payload.sub,
           },
