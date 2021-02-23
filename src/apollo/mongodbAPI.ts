@@ -84,7 +84,7 @@ class MongodbAPI extends DataSource {
   }: GetBarbersApiInput): Promise<Array<BarberDocument | BarberDocumentPopulated>> {
     //! The only time we populate an ID field
     // Other times ID is passed from prev resolver and we make a separate request
-    let barbersRequest = BarberModel.find({ completed: true });
+    let barbersRequest = BarberModel.find();
     if (!dateTime) {
       const foundBarbers = await barbersRequest.exec();
       return foundBarbers;

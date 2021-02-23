@@ -59,7 +59,6 @@ const typeDefs = gql`
     name: Name
     profileImageURL: String
     specialisation: Specialisation
-    completed: Boolean
   }
   input Name {
     first: String!

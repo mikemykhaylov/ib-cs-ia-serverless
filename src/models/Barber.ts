@@ -31,14 +31,12 @@ export interface UpdateBarberInput {
   };
   profileImageURL?: string;
   specialisation?: Specialisation;
-  completed?: boolean;
 }
 
 // Generic MongoDB document, population of appointmentIDS isnt specified
 // Inherits CreateBarberInput because everything is required there
 // Internal use
 interface BarberBaseDocument extends CreateBarberInput, Document {
-  completed: boolean;
   fullName: string;
 }
 
@@ -61,11 +59,6 @@ const BarberSchema: Schema<BarberDocument, Model<BarberDocument>> = new Schema({
   },
   profileImageURL: { type: String, required: true },
   specialisation: { type: String, enum: Object.values(Specialisation), required: true },
-  // Determines if the barber has filled all personal details
-  // False by default, because barbers are created in Auth0 Hook
-  // which doesn't provide a way to enter more information
-  // Will be set to true when barber fills specialisation, name and profileImageURL
-  completed: { type: Boolean, default: false },
   appointmentIDS: [
     {
       type: mongoose.Schema.Types.ObjectId,
