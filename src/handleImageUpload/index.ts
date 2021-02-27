@@ -20,6 +20,7 @@ const handleImageUpload = async (event: AWSLambda.S3Event) => {
   const auth0Domain = 'https://dev-q6a92igd.eu.auth0.com';
   const graphQLDomain = 'https://u06740719i.execute-api.eu-central-1.amazonaws.com/dev/graphql';
 
+  // Retrieving MANAGEMENT token from Auth0 by Cyberpunk Barbershop Lambda Upload Image
   const graphQLApiToken: GraphQLApiToken = await got
     .post(`${auth0Domain}/oauth/token`, {
       json: {
@@ -31,12 +32,14 @@ const handleImageUpload = async (event: AWSLambda.S3Event) => {
     })
     .json();
 
+  // Create new instance of GraphQL client
   const graphQLClient = new GraphQLClient(graphQLDomain, {
     headers: {
       Authorization: `${graphQLApiToken.token_type} ${graphQLApiToken.access_token}`,
     },
   });
 
+  // Make updateBarber request with profileImageURL of newly uploaded image
   const filename = event.Records[0].s3.object.key.split('/')[1];
   const barberID = filename.split('.')[0];
   const profileImageURL = `https://ib-cyberpunk-barbershop-data.s3.eu-central-1.amazonaws.com/${event.Records[0].s3.object.key}`;

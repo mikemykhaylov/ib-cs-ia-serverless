@@ -31,6 +31,7 @@ interface Auth0AuthTokenPayload extends JWTPayload {
   permissions: string[];
 }
 
+// Checking DB connection on each API call
 const middleware: AWSMiddleware<void> = {
   before: async ({ context }) => {
     context.callbackWaitsForEmptyEventLoop = false;
@@ -46,6 +47,7 @@ const server = new ApolloServer({
     mongodbAPI: new MongodbAPI(),
   }),
   context: async ({ event: req }: { event: AWSLambda.APIGatewayProxyEventV2 }) => {
+    // If there is an Authorization header, a user claims that he is logged in
     if (req.headers.Authorization) {
       const domain = 'https://dev-q6a92igd.eu.auth0.com';
       // Retrieving and validating ACCESS token
@@ -56,7 +58,7 @@ const server = new ApolloServer({
           issuer: `${domain}/`,
           audience: 'https://u06740719i.execute-api.eu-central-1.amazonaws.com/dev/graphql',
         })) as Auth0AuthToken;
-        // If successful, we get MANAGEMENT token from Auth0 by Cyberpunk Barbershop Server app...
+        // If successful, we get MANAGEMENT token from Auth0 by Cyberpunk Barbershop Server app
         const managementToken: Auth0ManagementToken = await got
           .post('https://dev-q6a92igd.eu.auth0.com/oauth/token', {
             json: {
@@ -92,6 +94,8 @@ const server = new ApolloServer({
             .json();
           email = response.email;
         }
+        // The current user (if present), server management token and the Auth0 domain
+        // are passed to the context parameter (third) in each resolver
         return {
           managementToken,
           user: {

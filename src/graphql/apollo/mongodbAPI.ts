@@ -38,6 +38,9 @@ export type GetBarbersGraphQLApiInput = { dateTime?: string };
 export type GetBarberGraphQLApiInput = { barberID?: string; email?: string };
 export type UpdateBarberGraphQLApiInput = { barberID: string; input: UpdateBarberInput };
 
+// In most cases what is passed to the GraphQL is passed to the MongoDB API
+// However, when calling createBarber mutation, not all data should be stored
+// Therefore it needs a separate type defined from MongoInput, not GraphQLApiInput
 export type CreateAppointmentMongoApiInput = CreateAppointmentGraphQLApiInput;
 export type GetAppointmentsMongoApiInput = GetAppointmentsGraphQLApiInput;
 export type GetAppointmentMongoApiInput = GetAppointmentGraphQLApiInput;

@@ -18,6 +18,7 @@ import MongodbAPI, {
   UpdateBarberGraphQLApiInput,
 } from './mongodbAPI';
 
+// Generic resolver type
 type Resolver<Parent, Args, Result> = (
   parent: Parent,
   args: Args,
@@ -77,6 +78,8 @@ interface Resolvers extends IResolvers {
   };
 }
 
+// Generic appointments property resolver,
+// hiding sensitive info from unathorsed users
 const protectedAppointmentProperty: (
   property: 'email' | 'fullName' | 'phoneNumber',
 ) => Resolver<AppointmentDocumentObject, null, string> = (property) => {
@@ -122,6 +125,8 @@ const resolvers: Resolvers = {
       const foundBarber = await dataSources.mongodbAPI.getBarber(args);
       return foundBarber;
     },
+    // User for:
+    // 1) Getting a signed URL from S3 (used when creating new barber)
     getSignedURL: async (_, args, { user }) => {
       if (user?.permissions?.includes('create:barber')) {
         const command = new PutObjectCommand({
@@ -146,6 +151,7 @@ const resolvers: Resolvers = {
     createBarber: async (_, args, { dataSources, managementToken, user, domain }) => {
       if (user?.permissions?.includes('create:barber') && managementToken && domain) {
         const { email, name, specialisation } = args.input;
+        // First we create user in Auth0, to get the default Gravatar picture as a fallback
         const { user_id: auth0BarberId, picture }: { user_id: string; picture: string } = await got
           .post(encodeURI(`${domain}/api/v2/users`), {
             json: {
@@ -159,6 +165,7 @@ const resolvers: Resolvers = {
             },
           })
           .json();
+        // Then we assign the Barber role to the newly created user
         await got.post(encodeURI(`${domain}/api/v2/roles/rol_5UrTEi3vDUKxTh8L/users`), {
           json: {
             users: [auth0BarberId],
@@ -167,6 +174,10 @@ const resolvers: Resolvers = {
             authorization: `${managementToken.token_type} ${managementToken.access_token}`,
           },
         });
+        // Finally we assemble data into an object and create a barber in MongoDB
+        // We set profileImageURL to picture provided by Auth0, so that it has a fallback
+        // in case profile image upload fails
+        // Also profileImageURL is required, so we can't create a barber in MongoDB without it
         const createBarberMongoArgs: CreateBarberMongoApiInput = {
           input: {
             email,
@@ -188,6 +199,7 @@ const resolvers: Resolvers = {
     },
     // Used for:
     // 1) Updating a barber (dev use)
+    // 2) Updating profileImageURL (used in Image Upload Handler function)
     updateBarber: async (_, args, { dataSources, managementToken, user, domain }) => {
       // Checking if:
       // 1) Logged in barber has permissions to update barbers (admin or image upload handler)
@@ -242,11 +254,13 @@ const resolvers: Resolvers = {
       return foundBarber;
     },
 
+    // Time needs conversion to ISO8601 string
+    time: (parent) => parent.time.toISOString(),
+
     // Protected properties
     fullName: protectedAppointmentProperty('fullName'),
     email: protectedAppointmentProperty('email'),
     phoneNumber: protectedAppointmentProperty('phoneNumber'),
-    time: (parent) => parent.time.toISOString(),
   },
   Barber: {
     // Used for:
