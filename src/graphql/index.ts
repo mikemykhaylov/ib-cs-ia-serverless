@@ -6,6 +6,7 @@ import createRemoteJWKSet from 'jose/jwks/remote';
 import jwtVerify, { JWTPayload } from 'jose/jwt/verify';
 import { JWTVerifyResult } from 'jose/webcrypto/types';
 
+import AmazonS3API from './apollo/amazonS3API';
 import MongodbAPI from './apollo/mongodbAPI';
 import resolvers from './apollo/resolvers';
 import typeDefs from './apollo/typeDefs';
@@ -45,6 +46,7 @@ const server = new ApolloServer({
   resolvers,
   dataSources: () => ({
     mongodbAPI: new MongodbAPI(),
+    amazonS3API: new AmazonS3API(),
   }),
   context: async ({ event: req }: { event: AWSLambda.APIGatewayProxyEventV2 }) => {
     // If there is an Authorization header, a user claims that he is logged in

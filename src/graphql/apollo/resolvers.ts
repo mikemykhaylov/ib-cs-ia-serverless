@@ -1,11 +1,9 @@
-import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { AuthenticationError, IResolvers } from 'apollo-server-lambda';
 import got from 'got';
 import { Auth0ManagementToken } from '../index';
 import { AppointmentDocumentObject } from '../models/Appointment';
 import { BarberDocument, BarberDocumentPopulated } from '../models/Barber';
-import { bucketName, s3Client } from '../utils/awsSetup';
+import AmazonS3API, { GetSignedURLGraphQLApiInput } from './amazonS3API';
 import MongodbAPI, {
   CreateAppointmentGraphQLApiInput,
   CreateBarberGraphQLApiInput,
@@ -23,17 +21,12 @@ type Resolver<Parent, Args, Result> = (
   parent: Parent,
   args: Args,
   context: {
-    dataSources: { mongodbAPI: MongodbAPI };
+    dataSources: { mongodbAPI: MongodbAPI; amazonS3API: AmazonS3API };
     user?: { email: string; id: string; permissions?: string[] };
     managementToken?: Auth0ManagementToken;
     domain?: string;
   },
 ) => Promise<Result>;
-
-type GetSignedURLInput = {
-  barberID: string;
-  fileExtension: string;
-};
 
 interface Resolvers extends IResolvers {
   Query: {
@@ -49,7 +42,7 @@ interface Resolvers extends IResolvers {
       (BarberDocument | BarberDocumentPopulated)[]
     >;
     barber: Resolver<undefined, GetBarberGraphQLApiInput, BarberDocument | undefined>;
-    getSignedURL: Resolver<undefined, GetSignedURLInput, string>;
+    getSignedURL: Resolver<undefined, GetSignedURLGraphQLApiInput, string>;
   };
   Mutation: {
     createAppointment: Resolver<
@@ -127,13 +120,9 @@ const resolvers: Resolvers = {
     },
     // User for:
     // 1) Getting a signed URL from S3 (used when creating new barber)
-    getSignedURL: async (_, args, { user }) => {
+    getSignedURL: async (_, args, { user, dataSources }) => {
       if (user?.permissions?.includes('create:barber')) {
-        const command = new PutObjectCommand({
-          Bucket: bucketName,
-          Key: `barberProfileImages/${args.barberID}.${args.fileExtension}`,
-        });
-        const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+        const url = await dataSources.amazonS3API.getSignedURL(args);
         return url;
       }
       throw new AuthenticationError('Unauthorized');
