@@ -13,6 +13,7 @@ class AmazonS3API extends DataSource {
   private awsRegion: string;
   private bucketName: string;
   private s3Client: S3Client;
+  // On class instancing we set up used vars
   constructor() {
     super();
     this.awsRegion = 'eu-central-1';
