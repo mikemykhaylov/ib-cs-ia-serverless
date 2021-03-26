@@ -1,6 +1,6 @@
 org: mmykhaylov
-app: ib-cs-ia-serverless
-service: ib-cyberpunk-barbershop
+app: ib-cs-ia
+service: appointments-service
 frameworkVersion: "2"
 provider:
   name: aws

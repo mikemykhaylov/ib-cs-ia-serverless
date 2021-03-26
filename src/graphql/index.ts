@@ -58,7 +58,7 @@ const server = new ApolloServer({
       try {
         const { payload } = (await jwtVerify(token, JWKS, {
           issuer: `${domain}/`,
-          audience: 'https://u06740719i.execute-api.eu-central-1.amazonaws.com/dev/graphql',
+          audience: 'https://p9pua97kq2.execute-api.eu-central-1.amazonaws.com/prod/graphql',
         })) as Auth0AuthToken;
         // If successful, we get MANAGEMENT token from Auth0 by Cyberpunk Barbershop Server app
         const managementToken: Auth0ManagementToken = await got

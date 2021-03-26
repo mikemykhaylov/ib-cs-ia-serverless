@@ -18,7 +18,7 @@ interface GraphQLApiToken {
 
 const handleImageUpload = async (event: AWSLambda.S3Event) => {
   const auth0Domain = 'https://dev-q6a92igd.eu.auth0.com';
-  const graphQLDomain = 'https://u06740719i.execute-api.eu-central-1.amazonaws.com/dev/graphql';
+  const graphQLDomain = 'https://p9pua97kq2.execute-api.eu-central-1.amazonaws.com/prod/graphql';
 
   // Retrieving MANAGEMENT token from Auth0 by Cyberpunk Barbershop Lambda Upload Image
   const graphQLApiToken: GraphQLApiToken = await got
