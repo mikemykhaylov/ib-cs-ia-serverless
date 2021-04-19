@@ -3647,10 +3647,10 @@ jmespath@0.15.0:
   resolved "https://registry.yarnpkg.com/jmespath/-/jmespath-0.15.0.tgz#a3f222a9aae9f966f5d27c796510e28091764217"
   integrity sha1-o/Iiqarp+Wb10nx5ZRDigJF2Qhc=
 
-jose@^3.11.1:
-  version "3.11.1"
-  resolved "https://registry.yarnpkg.com/jose/-/jose-3.11.1.tgz#4cb5e3ab8419374052010c668c60ae4cb2d6b503"
-  integrity sha512-vY5fSxP6AlP8Zl6gZFyk2b1rbMn38IGzoF5T6hrbAe9ZONV8AbBmM+a/F+Umof6H1AYMIMKsDLttfsn3rKhZ9Q==
+jose@^3.11.4:
+  version "3.11.4"
+  resolved "https://registry.yarnpkg.com/jose/-/jose-3.11.4.tgz#e3e9c3c66ecfe5f758799248857ac02877f06405"
+  integrity sha512-nYUGe7axercxj4O5amg7iDFMpfh2yJ15Gz+U1CrgCrRvmHzzYHUwSzTFsF5bj9xSvl6/d0GC8hPTALyhjQofDA==
 
 js-string-escape@^1.0.1:
   version "1.0.1"
